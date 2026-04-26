@@ -14,7 +14,7 @@ ghcr.io/roxabi/ml-base:cu128-py312-torch2.7.1
 | Python | 3.12 (Ubuntu 24.04 native) |
 | PyTorch | 2.7.1+cu128 |
 | torchaudio | 2.7.1+cu128 |
-| flash-attn | 2.7.4 |
+| flash-attn | 2.7.4.post1 |
 
 ## Tags
 
