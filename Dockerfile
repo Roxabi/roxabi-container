@@ -24,7 +24,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN uv pip install --system --break-system-packages \
         "torch==${TORCH_VERSION}+cu128" \
         "torchaudio==${TORCHAUDIO_VERSION}+cu128" \
-        --index-url https://download.pytorch.org/whl/cu128
+        --index-url https://download.pytorch.org/whl/cu128 && \
+    uv pip install --system --break-system-packages \
+        nvidia-cusparselt-cu12 \
+        nvidia-nvshmem-cu12
 
 RUN uv pip install --system --break-system-packages packaging wheel setuptools ninja && \
     uv pip install --system --break-system-packages \
