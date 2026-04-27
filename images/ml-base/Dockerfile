@@ -7,7 +7,7 @@ ARG TORCHAUDIO_VERSION=2.7.1
 ARG FLASH_ATTN_VERSION=2.7.4.post1
 
 # ── build stage (devel image has nvcc for flash-attn compile) ────────────────
-FROM docker.io/nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04 AS builder
+FROM docker.io/nvidia/cuda:13.2.1-cudnn-devel-ubuntu24.04 AS builder
 
 ARG TORCH_VERSION
 ARG TORCHAUDIO_VERSION
@@ -35,7 +35,7 @@ RUN uv pip install --system --break-system-packages packaging wheel setuptools n
     rm -rf /root/.cache/uv /root/.cache/pip /tmp/*
 
 # ── runtime stage (no compiler toolchain, smaller image) ─────────────────────
-FROM docker.io/nvidia/cuda:12.8.1-cudnn-runtime-ubuntu24.04
+FROM docker.io/nvidia/cuda:13.2.1-cudnn-runtime-ubuntu24.04
 
 ARG TORCH_VERSION
 ARG FLASH_ATTN_VERSION
