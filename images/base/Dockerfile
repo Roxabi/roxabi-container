@@ -4,6 +4,9 @@
 
 FROM node:24-bookworm
 
+LABEL org.opencontainers.image.source="https://github.com/Roxabi/roxabi-container" \
+      org.opencontainers.image.description="Node 24 + Python 3.12 + uv + bun + Claude Code agent base"
+
 # ── Package sources ───────────────────────────────────────────────────────────
 # GitHub CLI
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
@@ -18,14 +21,10 @@ RUN echo "deb http://deb.debian.org/debian bookworm-backports main" \
 
 # ── System tools ─────────────────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Claude Code hard requirements
     git gh ripgrep bash less jq procps sudo ca-certificates \
     unzip gnupg2 fzf iproute2 dnsutils \
-    # SSH + file sync (deploy scripts across projects)
     openssh-client rsync \
-    # Common build/project tools
     make sqlite3 file xz-utils \
-    # Python 3.12 (from backports — bookworm ships 3.11)
     && apt-get install -y -t bookworm-backports --no-install-recommends \
     python3.12 python3.12-dev python3.12-venv \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 \
@@ -36,16 +35,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 # ── Node package managers ────────────────────────────────────────────────────
-# yarn + pnpm via corepack (ships with Node 24)
 RUN corepack enable \
     && corepack prepare yarn@stable --activate \
     && corepack prepare pnpm@latest --activate
 
-# bun (used in roxabi-boilerplate, roxabi-forge, roxabi-plugins, roxabi-talks)
 RUN npm install -g bun
 
 # ── Claude Code CLI ──────────────────────────────────────────────────────────
 RUN npm install -g @anthropic-ai/claude-code
+
+# ── Default non-root user (consumers override with their own UID if needed) ──
+RUN useradd -u 1000 -m -s /bin/bash app \
+    && echo "app ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/app
+
+USER app
 
 # ── Smoke tests ──────────────────────────────────────────────────────────────
 RUN node --version \

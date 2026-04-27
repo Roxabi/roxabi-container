@@ -5,6 +5,11 @@ on:
     branches: [main]
     paths: [images/ml-base/**]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Extra tag to push alongside :latest (e.g. test, staging)'
+        required: false
+        default: ''
 
 env:
   REGISTRY: ghcr.io
@@ -30,13 +35,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Generate tags
+        id: tags
+        run: |
+          TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}"
+          if [ -n "${{ inputs.tag }}" ]; then
+            TAGS="${TAGS}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.tag }}"
+          fi
+          echo "tags<<EOF" >> $GITHUB_OUTPUT
+          echo "${TAGS}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: images/ml-base
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max

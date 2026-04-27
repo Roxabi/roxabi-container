@@ -1,0 +1,42 @@
+---
+title: "ADR-001: Container Image Monorepo"
+description: Consolidate all Roxabi container base images into a single repository with path-triggered CI per image.
+---
+
+## Status
+
+Accepted
+
+## Context
+
+The ML base image (`roxabi-ml-base`) lived in its own repository. A new `base` image (Node + Python + Claude Code CLI) was introduced for lyra and future agent containers. Managing two separate repositories with overlapping CI patterns, the same registry (`ghcr.io/roxabi/`), and coordinated deployment lifecycles created unnecessary overhead for a solo developer.
+
+The question was whether to keep images in separate repositories (one concern per repo) or consolidate into a monorepo with path-scoped CI.
+
+## Options Considered
+
+### Option A: Separate repos per image (status quo)
+- **Pros:** Hard isolation; each image has its own issue tracker, release history, and access controls
+- **Cons:** Duplicated CI boilerplate; no unified view of image dependency graph; cross-image coordination (e.g., CUDA upgrade affecting multiple images) requires touching multiple repos; overkill for a personal stack
+
+### Option B: Monorepo with path-triggered CI (chosen)
+- **Pros:** Single place to track all base image changes; CI path filters (`images/base/**`, `images/ml-base/**`) give the same build isolation as separate repos; cross-image changes visible in one PR; shared CI patterns (GHCR login, buildx setup, registry cache) defined once
+- **Cons:** A single bad commit can block CI for all images simultaneously; no per-image access control (irrelevant for a personal project)
+
+## Decision
+
+Consolidate into a single `roxabi-container` monorepo (currently `roxabi-ml-base`). Each image lives under `images/<name>/`. GitHub Actions workflows are scoped to their respective paths. Both images publish to `ghcr.io/roxabi/`.
+
+## Consequences
+
+### Positive
+- One repository to track, review, and maintain for all base images
+- Cross-image dependency changes (e.g., Python version bump affecting both base and ml-base) are visible in a single PR
+- CI boilerplate (registry auth, buildx, cache) defined once and consistent
+
+### Negative
+- A CI failure in shared workflow infrastructure affects all images, not just one
+
+### Neutral
+- Consumer repositories (lyra, voiceCLI) reference images by tag; the monorepo consolidation is invisible to them
+- Cross-image rebuild triggers are not implemented — a change to `base` does not automatically trigger a lyra rebuild (acceptable at solo scale)

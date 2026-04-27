@@ -1,0 +1,58 @@
+---
+title: "ADR-004: Base Image Tagging Strategy"
+description: Document the tagging strategy for base and ml-base images and the rationale for diverging approaches.
+---
+
+## Status
+
+Accepted
+
+## Context
+
+The two images in this monorepo use different tagging strategies:
+
+- `roxabi/ml-base` — semantic tag (`cu128-py312-torch2.7.1`) plus `latest` alias. Consumers pin to the semantic tag (e.g., `ARG ML_BASE_TAG=cu128-py312-torch2.7.1`).
+- `roxabi/base` — `latest` only. Consumer (lyra) references `FROM ghcr.io/roxabi/base:latest`.
+
+This divergence is partially intentional (ml-base changes rarely; base changes more often) but the `base:latest` approach has a correctness gap: a breaking change to base propagates to lyra's next build with no staged rollout possible and no rollback path.
+
+## Options Considered
+
+### Option A: latest-only for base (current state)
+- **Pros:** Simple; no version management overhead for a fast-moving image
+- **Cons:** Non-reproducible consumer builds; breaking changes are immediate with no rollback; no way to test a new base against lyra before deploying
+
+### Option B: Semantic tags for base, latest as alias (chosen — align with ml-base pattern)
+- **Pros:** Consumers can pin to a stable tag and upgrade deliberately; rollback is possible by reverting the tag reference in the consumer Dockerfile; aligns with ml-base pattern already proven correct
+- **Cons:** Requires discipline to bump the tag on breaking changes; slightly more Dockerfile churn
+
+### Option C: SHA digest pinning in consumer Dockerfiles
+- **Pros:** Absolute reproducibility; immune to tag mutation
+- **Cons:** Digest must be manually updated on every base rebuild; unreadable in Dockerfiles; no semantic meaning
+
+## Decision
+
+Adopt semantic tags for `roxabi/base` aligned with the ml-base pattern. Proposed scheme: `node<N>-py<X.Y>-claude<Z>` (e.g., `node24-py312-claude1`). `latest` remains as an alias pointing to the current stable tag.
+
+Consumer Dockerfiles should pin to the semantic tag:
+```dockerfile
+ARG BASE_TAG=node24-py312-claude1
+FROM ghcr.io/roxabi/base:${BASE_TAG} AS runtime
+```
+
+The `claude` component of the tag should increment when Claude Code CLI major version changes or a breaking behavior change is introduced.
+
+This is a **follow-up action** from this ADR — the current state is `latest`-only (Option A). This ADR documents the accepted direction; implementation must be done in a subsequent commit.
+
+## Consequences
+
+### Positive
+- Consumer images (lyra) are reproducible and can be rebuilt against a known base
+- Breaking changes to base can be staged: update the tag in lyra's Dockerfile intentionally
+- Rollback is possible by reverting the tag reference
+
+### Negative
+- Tag must be bumped manually on meaningful base changes; if forgotten, `latest` moves but consumers are pinned to stale tag (mitigated: `workflow_dispatch` exists for manual rebuilds)
+
+### Neutral
+- `latest` tag continues to exist as a convenience alias for local pulls; it is not used by consumer Dockerfiles

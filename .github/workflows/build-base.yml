@@ -4,7 +4,14 @@ on:
   push:
     branches: [main]
     paths: [images/base/**]
+  schedule:
+    - cron: '0 4 * * 1'  # Every Monday 04:00 UTC — keeps claude-code, uv, bun fresh
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Extra tag to push alongside :latest (e.g. test, staging)'
+        required: false
+        default: ''
 
 env:
   REGISTRY: ghcr.io
@@ -29,12 +36,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Generate tags
+        id: tags
+        run: |
+          DATE=$(date +'%Y.%m')
+          TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${DATE}"
+          if [ -n "${{ inputs.tag }}" ]; then
+            TAGS="${TAGS}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.tag }}"
+          fi
+          echo "tags<<EOF" >> $GITHUB_OUTPUT
+          echo "${TAGS}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: images/base
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max

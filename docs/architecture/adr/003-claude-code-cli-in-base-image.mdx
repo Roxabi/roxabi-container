@@ -1,0 +1,47 @@
+---
+title: "ADR-003: Claude Code CLI Baked into Base Image"
+description: Install Claude Code CLI in the shared base image rather than in each consumer Dockerfile.
+---
+
+## Status
+
+Accepted
+
+## Context
+
+Claude Code CLI (`@anthropic-ai/claude-code`) is required by lyra's `clipool` service, which runs Claude Code as a subprocess agent. The question was whether to install it in the shared `roxabi/base` image (making it available to all consumers) or in the consumer Dockerfile (lyra-specific).
+
+The base image's stated purpose is "Claude Code dev/agent base image" — this decision defines the image's identity contract.
+
+## Options Considered
+
+### Option A: Install in consumer (lyra) Dockerfile only
+- **Pros:** Base image stays generic; other consumers of the base that do not need Claude Code avoid the dependency; version is controlled per-consumer
+- **Cons:** Every agent container that needs Claude Code must repeat the install; lyra-clipool is the primary (and currently only) consumer of this base image, so the split provides no practical benefit today; the base image's stated identity is already "agent runtime"
+
+### Option B: Install in base image (chosen)
+- **Pros:** The base image contract is explicit — it provides a Claude Code agent runtime; all future agent containers inherit it without duplication; consistent version across all agents
+- **Cons:** Claude Code version is not pinned (`npm install -g @anthropic-ai/claude-code` installs latest at build time), making builds non-reproducible across time; base image rebuilds without an application change may silently upgrade Claude Code
+
+## Decision
+
+Install Claude Code CLI in the base image. The image is scoped to agent runtimes, making this a first-class capability rather than an incidental dependency.
+
+**Required follow-up (not blocking this ADR but must be resolved):** Pin the Claude Code version explicitly in the Dockerfile:
+```dockerfile
+RUN npm install -g @anthropic-ai/claude-code@<version>
+```
+Until pinned, two builds of `base:latest` at different times may produce different Claude Code behavior, and `latest` tag overwrite prevents rollback.
+
+## Consequences
+
+### Positive
+- Base image is self-describing: any container built FROM it is a Claude Code agent runtime
+- Future agent containers get Claude Code without additional Dockerfile steps
+
+### Negative
+- Base image size increases by the Claude Code CLI footprint
+- Claude Code version currently unpinned — non-reproducible builds until pinning is added
+
+### Neutral
+- `claude --version` smoke test runs at base image build time, failing the build if the CLI is broken; this does not validate runtime behavior in consumer containers

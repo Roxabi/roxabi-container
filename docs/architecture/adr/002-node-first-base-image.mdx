@@ -1,0 +1,44 @@
+---
+title: "ADR-002: Node-First Base Image for Agent Runtime"
+description: Use node:24-bookworm as the base for the roxabi/base image rather than a Python-first image.
+---
+
+## Status
+
+Accepted
+
+## Context
+
+The `roxabi/base` image serves lyra's `clipool` service, which runs Claude Code CLI as a subprocess agent. Claude Code is a Node.js process with hard dependencies on a Node runtime, `gh`, `ripgrep`, `git`, `bash`, and related tools — all of which ship in `node:24-bookworm`. Python is also required (lyra is Python 3.12), but lyra's Dockerfile uses a builder/runtime split: the Python venv is built on `python:3.12-slim` and copied into the runtime stage.
+
+The question was whether to start from a Node image and layer Python, or start from a Python image and layer Node.
+
+## Options Considered
+
+### Option A: python:3.12-bookworm as base, install Node on top
+- **Pros:** Primary runtime language (Python) is the official upstream; Python version guaranteed to be 3.12 without backports
+- **Cons:** Installing Node from NodeSource or nvm in a Dockerfile is more complex and produces less reliable layer caching than using the official Node image; claude CLI, npm, and Node tooling are first-class citizens of the Node image, not afterthoughts
+
+### Option B: node:24-bookworm as base, layer Python 3.12 (chosen)
+- **Pros:** Claude Code CLI is the primary purpose of this image — using the Node image means Node, npm, corepack, yarn, pnpm, and bun are all first-class; `node:24-bookworm` is an official Debian 12 image with stable layer caching; Python 3.12 from backports works reliably on Bookworm
+- **Cons:** Python 3.12 sourced from `bookworm-backports` rather than an official Python image; backport availability is not guaranteed across future Debian release cycles (maintenance risk)
+
+### Option C: debian:bookworm-slim, install both Node and Python manually
+- **Pros:** Maximum control over what is installed; no inherited assumptions
+- **Cons:** Most Dockerfile complexity; forfeits official Node image guarantees; not worth the overhead for a personal stack
+
+## Decision
+
+Use `node:24-bookworm` as the base. Python 3.12 is installed via `bookworm-backports`. This reflects the true primary consumer: lyra-clipool, where Claude Code CLI is the core runtime requirement and Python is the application layer copied in from a builder stage.
+
+## Consequences
+
+### Positive
+- Node, npm, corepack, and all JS tooling are first-class with clean layer cache guarantees
+- Claude Code CLI, yarn, pnpm, bun install cleanly without workarounds
+
+### Negative
+- Python 3.12 sourced from backports; if Debian drops or delays the backport, image builds fail. Mitigation: monitor `bookworm-backports` python3.12 availability or migrate to `node:24-bookworm` + deadsnakes PPA if needed
+
+### Neutral
+- Consumer Dockerfiles (lyra) use `python:3.12-slim` for the builder stage and `ghcr.io/roxabi/base` only for the runtime stage — the Python version in the base image is not used to build the venv, only to run it
