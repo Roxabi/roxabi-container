@@ -32,20 +32,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1 \
     && rm -rf /var/lib/apt/lists/*
 
-# ── uv ───────────────────────────────────────────────────────────────────────
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+# ── uv 0.11.7 ────────────────────────────────────────────────────────────────
+COPY --from=ghcr.io/astral-sh/uv:0.11.7 /uv /uvx /usr/local/bin/
 
 # ── Node package managers ────────────────────────────────────────────────────
-# yarn + pnpm via corepack (ships with Node 24)
 RUN corepack enable \
-    && corepack prepare yarn@stable --activate \
-    && corepack prepare pnpm@latest --activate
+    && corepack prepare yarn@1.22.22 --activate \
+    && corepack prepare pnpm@10.33.2 --activate
 
-# bun (used in roxabi-boilerplate, roxabi-forge, roxabi-plugins, roxabi-talks)
-RUN npm install -g bun
+# bun 1.3.13
+RUN npm install -g bun@1.3.13
 
-# ── Claude Code CLI ──────────────────────────────────────────────────────────
-RUN npm install -g @anthropic-ai/claude-code
+# ── Claude Code 2.1.119 ──────────────────────────────────────────────────────
+RUN npm install -g @anthropic-ai/claude-code@2.1.119
 
 # ── Smoke tests ──────────────────────────────────────────────────────────────
 RUN node --version \
