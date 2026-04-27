@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths: [images/base/**]
+    tags: ['base/v*']
   schedule:
     - cron: '0 4 * * 1'  # Every Monday 04:00 UTC — keeps claude-code, uv, bun fresh
   workflow_dispatch:
@@ -39,9 +40,15 @@ jobs:
       - name: Generate tags
         id: tags
         run: |
-          DATE=$(date +'%Y.%m')
-          TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${DATE}"
+          TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          # Git tag base/vX.Y.Z → also push :vX.Y.Z
+          if [[ "${{ github.ref }}" == refs/tags/base/v* ]]; then
+            VERSION="${{ github.ref_name }}"   # e.g. base/v1.0.0
+            VERSION="${VERSION#base/}"          # strip prefix → v1.0.0
+            TAGS="${TAGS}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}"
+          fi
+          # Manual dispatch with extra tag
           if [ -n "${{ inputs.tag }}" ]; then
             TAGS="${TAGS}
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.tag }}"
