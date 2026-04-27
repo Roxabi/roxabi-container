@@ -4,17 +4,19 @@ ML_BASE_TAG := cu128-py312-torch2.7.1
 .PHONY: build-base push-base build-ml-base push-ml-base
 
 build-base:
-	docker build -t $(REGISTRY)/base:latest images/base/
+	docker buildx build -t $(REGISTRY)/base:latest images/base/
 
-push-base: build-base
-	docker push $(REGISTRY)/base:latest
+push-base:
+	docker buildx build --push -t $(REGISTRY)/base:latest images/base/
 
 build-ml-base:
-	docker build \
+	docker buildx build \
 		-t $(REGISTRY)/ml-base:latest \
 		-t $(REGISTRY)/ml-base:$(ML_BASE_TAG) \
 		images/ml-base/
 
-push-ml-base: build-ml-base
-	docker push $(REGISTRY)/ml-base:latest
-	docker push $(REGISTRY)/ml-base:$(ML_BASE_TAG)
+push-ml-base:
+	docker buildx build --push \
+		-t $(REGISTRY)/ml-base:latest \
+		-t $(REGISTRY)/ml-base:$(ML_BASE_TAG) \
+		images/ml-base/
