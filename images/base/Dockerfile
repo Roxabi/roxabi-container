@@ -15,24 +15,23 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
         > /etc/apt/sources.list.d/github-cli.list
 
-# Backports for Python 3.12 (Bookworm default is 3.11)
-RUN echo "deb http://deb.debian.org/debian bookworm-backports main" \
-        > /etc/apt/sources.list.d/backports.list
-
 # ── System tools ─────────────────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git gh ripgrep bash less jq procps sudo ca-certificates \
     unzip gnupg2 fzf iproute2 dnsutils \
     openssh-client rsync \
     make sqlite3 file xz-utils \
-    && apt-get install -y -t bookworm-backports --no-install-recommends \
-    python3.12 python3.12-dev python3.12-venv \
-    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 \
-    && update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1 \
     && rm -rf /var/lib/apt/lists/*
 
-# ── uv ───────────────────────────────────────────────────────────────────────
+# ── uv (manages Python — no system Python install needed) ────────────────────
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+# Install Python 3.12 to a shared dir and expose as system python3/python
+ENV UV_PYTHON_INSTALL_DIR=/usr/local/lib/uv-python
+RUN uv python install 3.12 \
+    && ln -s "$(uv python find 3.12)" /usr/local/bin/python3 \
+    && ln -s "$(uv python find 3.12)" /usr/local/bin/python \
+    && chmod -R a+rX /usr/local/lib/uv-python
 
 # ── Node package managers ────────────────────────────────────────────────────
 RUN corepack enable \
@@ -44,8 +43,8 @@ RUN npm install -g bun
 # ── Claude Code CLI ──────────────────────────────────────────────────────────
 RUN npm install -g @anthropic-ai/claude-code
 
-# ── Default non-root user (consumers override with their own UID if needed) ──
-RUN useradd -u 1000 -m -s /bin/bash app \
+# ── Default non-root user (UID 1001; node:24-bookworm reserves 1000 for "node") ──
+RUN useradd -u 1001 -m -s /bin/bash app \
     && echo "app ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/app
 
 USER app
