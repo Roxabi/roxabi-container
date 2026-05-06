@@ -2,7 +2,7 @@
 # roxabi-base — Claude Code dev/agent base image
 # Consumers: lyra-clipool, any future agent container
 
-FROM node:24-bookworm
+FROM node:25-bookworm
 
 LABEL org.opencontainers.image.source="https://github.com/Roxabi/roxabi-container" \
       org.opencontainers.image.description="Node 24 + Python 3.12 + uv + bun + Claude Code agent base"
