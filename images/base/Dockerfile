@@ -34,7 +34,8 @@ RUN uv python install 3.12 \
     && chmod -R a+rX /usr/local/lib/uv-python
 
 # ── Node package managers ────────────────────────────────────────────────────
-RUN corepack enable \
+RUN npm install -g corepack \
+    && corepack enable \
     && corepack prepare yarn@stable --activate \
     && corepack prepare pnpm@latest --activate
 
