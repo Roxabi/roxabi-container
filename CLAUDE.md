@@ -20,7 +20,7 @@ Builds and publishes `ghcr.io/roxabi/base` and `ghcr.io/roxabi/ml-base`.
 
 | Image | Base | Consumers |
 |---|---|---|
-| `ghcr.io/roxabi/base:latest` | `node:24-bookworm` | lyra-clipool |
+| `ghcr.io/roxabi/base:latest` | `node:24-bookworm` | factory-clipool |
 | `ghcr.io/roxabi/ml-base:latest` | `nvidia/cuda:12.8.1-ubuntu24.04` | voiceCLI, imageCLI |
 
 ## Make commands
@@ -65,4 +65,4 @@ git tag base/v1.0.0 && git push --tags
 - ml-base: no non-root user (runs as root in prod)
 - ml-base: no git tag trigger for versioned releases
 - ml-base: no weekly scheduled rebuild (OS-layer CVEs)
-- ADR-004 accepted but not implemented: lyra still references `base:latest` instead of a pinned semantic tag
+- ADR-004 accepted but not implemented: factory still references `base:latest` instead of a pinned semantic tag

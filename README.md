@@ -6,7 +6,7 @@ Container image monorepo for the Roxabi stack. Builds and publishes base images 
 
 | Image | Base | Purpose | Consumers |
 |---|---|---|---|
-| [`roxabi/base`](images/base/Dockerfile) | `node:24-bookworm` | Claude Code agent runtime — Node 24, Python 3.12, uv, bun, yarn, pnpm, gh, ripgrep, claude CLI | lyra-clipool |
+| [`roxabi/base`](images/base/Dockerfile) | `node:24-bookworm` | Claude Code agent runtime — Node 24, Python 3.12, uv, bun, yarn, pnpm, gh, ripgrep, claude CLI | factory-clipool |
 | [`roxabi/ml-base`](images/ml-base/Dockerfile) | `nvidia/cuda:12.8.1` | GPU/ML runtime — CUDA 12.8, PyTorch 2.7.1+cu128, flash-attn | voiceCLI, imageCLI |
 
 ## Getting started
