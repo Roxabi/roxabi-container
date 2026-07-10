@@ -2,19 +2,20 @@ name: Build and push ml-base image
 
 on:
   push:
-    branches: [main]
-    paths: [images/ml-base/**]
+    branches: [main, staging]
+    paths:
+      - images/ml-base/**
+      - .github/workflows/build-ml-base.yml
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Extra tag to push alongside :latest (e.g. test, staging)'
+        description: 'Extra tag to push alongside branch default (e.g. test)'
         required: false
         default: ''
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: roxabi/ml-base
-  TAG: cu128-py312-torch2.7.1
 
 permissions:
   contents: read
@@ -38,8 +39,12 @@ jobs:
       - name: Generate tags
         id: tags
         run: |
-          TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}"
+          if [ "${{ github.ref_name }}" = "staging" ]; then
+            TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cu128-staging"
+          else
+            TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cu128-py312-torch2.7.1"
+          fi
           if [ -n "${{ inputs.tag }}" ]; then
             TAGS="${TAGS}
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.tag }}"
